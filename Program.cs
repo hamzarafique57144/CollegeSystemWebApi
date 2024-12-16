@@ -1,17 +1,21 @@
+using CollegeAppWebAPI.Models.Data;
 using CollegeAppWebAPI.Models.Repository;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 // Register the repository
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddSingleton<IStudentRepository, StudentRepository>();
-builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddControllers(options => options.ReturnHttpNotAcceptable = true).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters();
+builder.Services.AddDbContext<CollegeDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("CollegeAppDbConnection")));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

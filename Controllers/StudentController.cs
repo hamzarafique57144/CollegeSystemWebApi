@@ -12,9 +12,13 @@ namespace CollegeAppWebAPI.Controllers
     {
         private readonly IStudentRepository studentRepository;
 
-        public StudentController(IStudentRepository studentRepository)
+        private readonly ILogger<StudentController> logger
+            ;
+
+        public StudentController(IStudentRepository studentRepository, ILogger<StudentController> logger)
         {
             this.studentRepository = studentRepository;
+            this.logger = logger;
         }
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<Student>))]
@@ -44,6 +48,7 @@ namespace CollegeAppWebAPI.Controllers
             {
                 if (id <= 0)
                 {
+                    logger.LogWarning($" {id} is not a valid id");
                     return BadRequest("The ID must be a positive integer greater than 0.");
                 }
 
