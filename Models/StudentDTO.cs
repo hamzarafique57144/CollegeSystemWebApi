@@ -21,7 +21,7 @@ namespace CollegeAppWebAPI.Models
         [Required(ErrorMessage = "Date of Birth is required.")]
         [DataType(DataType.Date, ErrorMessage = "Invalid date format.")]
         [CustomValidation(typeof(DateValidator), nameof(DateValidator.ValidatePastDate))]
-        public DateTime DateOfBirth { get; set; }
+        public DateTime DOB { get; set; }
 
     }
 }

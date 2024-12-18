@@ -1,5 +1,5 @@
+using CollegeAppWebAPI.Configurations;
 using CollegeAppWebAPI.Models.Data;
-using CollegeAppWebAPI.Models.Repository;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,13 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 // Register the repository
-builder.Services.AddScoped<IStudentRepository, StudentRepository>();
-builder.Services.AddSingleton<IStudentRepository, StudentRepository>();
+
 builder.Services.AddControllers(options => options.ReturnHttpNotAcceptable = true).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters();
 builder.Services.AddDbContext<CollegeDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("CollegeAppDbConnection")));
-var app = builder.Build();
+//builder.Services.AddAutoMapper(typeof(AutomapperConfiq));
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
+var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
