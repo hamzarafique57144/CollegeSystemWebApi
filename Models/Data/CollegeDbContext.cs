@@ -9,16 +9,15 @@ namespace CollegeAppWebAPI.Models.Data
         {
                 
         }
-       public DbSet<Student> Students { get; set; }
+       public DbSet<Student> Students { get; set; } 
+        public DbSet<Department> Departments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             //Student Table
             modelBuilder.ApplyConfiguration(new StudentConfig());
-            
-            
+            modelBuilder.ApplyConfiguration(new DepartmentConfig());
 
-           
         }
 
     }

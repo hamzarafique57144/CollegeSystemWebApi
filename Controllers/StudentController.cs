@@ -1,45 +1,63 @@
 ﻿using AutoMapper;
 using CollegeAppWebAPI.Models;
 using CollegeAppWebAPI.Models.Data;
+using CollegeAppWebAPI.Models.Data.Repository;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace CollegeAppWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    
+    [EnableCors(PolicyName = "AllowAll")]
+    
     public class StudentController : ControllerBase
     {
-        private readonly CollegeDbContext _context;
+        private readonly IStudentRepository _repository;
         private readonly ILogger<StudentController> _logger;
         private readonly IMapper _mapper;
+        private APIResponse _apiResponse;
 
-        public StudentController(CollegeDbContext context, ILogger<StudentController> logger, IMapper mapper)
+        public StudentController(IStudentRepository repository, ILogger<StudentController> logger, IMapper mapper,APIResponse apiResponse)
         {
-            _context = context;
+            _repository = repository;
             _logger = logger;
             _mapper = mapper;
+            _apiResponse = apiResponse;
         }
-
+        
         /// <summary>
         /// Retrieves all students from the database.
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpGet("AllStudents")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<StudentDTO>>> GetStudents()
+        
+        public async Task<ActionResult<APIResponse>> GetStudents()
         {
             try
             {
-                var students = await _context.Students.ToListAsync();
-                var studentDtos = _mapper.Map<IEnumerable<StudentDTO>>(students);
-                return Ok(studentDtos);
+                var students = await _repository.GetAllAsync();
+
+                //var studentDtos = _mapper.Map<IEnumerable<StudentDTO>>(students);              
+                _apiResponse.Data = _mapper.Map<IEnumerable<StudentDTO>>(students);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
+                return Ok(_apiResponse);
             }
             catch (Exception ex)
             {
+                _apiResponse.Error.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
                 _logger.LogError(ex, "Error occurred while retrieving all students.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.");
+                return _apiResponse;
             }
         }
 
@@ -49,51 +67,61 @@ namespace CollegeAppWebAPI.Controllers
         [HttpGet("{id:int}", Name = "GetStudentById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<StudentDTO>> GetStudentById(int id)
+        public async Task<ActionResult<APIResponse>> GetStudentById(int id)
         {
             if (id <= 0)
                 return BadRequest("The ID must be a positive integer greater than 0.");
 
             try
             {
-                var student = await _context.Students.FindAsync(id);
+                var student = await _repository.GetAsync(student => student.Id == id);
                 if (student == null)
                     return NotFound($"Student with ID {id} not found.");
 
-                var studentDto = _mapper.Map<StudentDTO>(student);
-                return Ok(studentDto);
+                _apiResponse.Data = _mapper.Map<StudentDTO>(student);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
+                return Ok(_apiResponse);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while retrieving student by ID.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.");
+                _apiResponse.Error.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
             }
         }
 
         /// <summary>
         /// Retrieves a student by their name.
         /// </summary>
-        [HttpGet("{name:alpha}")]
+        [HttpGet("ByName/{name}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<StudentDTO>> GetStudentByName(string name)
+        public async Task<ActionResult<APIResponse>> GetStudentByName(string name)
         {
-            if (string.IsNullOrEmpty(name))
-                return BadRequest("Name cannot be empty.");
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("The name must not be null or empty.");
 
             try
             {
-                var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentName == name);
+                var student = await _repository.GetAsync(student => student.StudentName == name);
                 if (student == null)
                     return NotFound($"Student with name '{name}' not found.");
 
-                var studentDto = _mapper.Map<StudentDTO>(student);
-                return Ok(studentDto);
+                _apiResponse.Data = _mapper.Map<StudentDTO>(student);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
+                return Ok(_apiResponse);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while retrieving student by name.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.");
+                _apiResponse.Error.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
             }
         }
 
@@ -103,25 +131,34 @@ namespace CollegeAppWebAPI.Controllers
         [HttpPost("Create")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<StudentDTO>> CreateStudent([FromBody] StudentDTO studentDto)
+        public async Task<ActionResult<APIResponse>> CreateStudent([FromBody] StudentDTO studentDto)
         {
-            if (studentDto == null)
-                return BadRequest("Invalid student data.");
+            if (!ModelState.IsValid)
+            {
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.BadRequest;
+                _apiResponse.Error = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                return BadRequest(_apiResponse);
+            }
 
             try
             {
-                var newStudent = _mapper.Map<Student>(studentDto);
+                var student = _mapper.Map<Student>(studentDto);
+                var createdStudent = await _repository.AddAsync(student);
 
-                await _context.Students.AddAsync(newStudent);
-                await _context.SaveChangesAsync();
-
-                var createdStudentDto = _mapper.Map<StudentDTO>(newStudent);
-                return CreatedAtRoute("GetStudentById", new { id = createdStudentDto.Id }, createdStudentDto);
+                _apiResponse.Data = _mapper.Map<StudentDTO>(createdStudent);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
+                //return CreatedAtRoute("GetStudentById", new { id = createdStudentDto.Id }, createdStudentDto);
+                return Ok(_apiResponse);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while creating a new student.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.");
+                _apiResponse.Error.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
             }
         }
 
@@ -130,39 +167,47 @@ namespace CollegeAppWebAPI.Controllers
         /// </summary>
         [HttpPut("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateStudent(int id, [FromBody] StudentDTO studentDto)
+        public async Task<ActionResult<APIResponse>> UpdateStudent(int id, [FromBody] StudentDTO studentDto)
         {
-            if (id <= 0 || studentDto == null)
-                return BadRequest("Invalid input data.");
+            if (!ModelState.IsValid || id != studentDto.Id)
+            {
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.BadRequest;
+                _apiResponse.Error = new List<string> { "Invalid data or mismatched ID." };
+                return BadRequest(_apiResponse);
+            }
 
             try
             {
-                // Retrieve the student entity from the database
-                var student = await _context.Students.FirstOrDefaultAsync(n => n.Id == id);
+                var student = await _repository.GetAsync(n => n.Id == id);
                 if (student == null)
-                    return NotFound($"Student with ID {id} not found.");
+                {
+                    _apiResponse.Status = false;
+                    _apiResponse.StatusCode = HttpStatusCode.NotFound;
+                    _apiResponse.Error = new List<string> { "Student not found." };
+                    return NotFound(_apiResponse);
+                }
 
-                // Ignore the Id from the DTO and use the ID from the route
-                studentDto.Id = id;
-
-                // Map changes from DTO to the existing student entity
                 _mapper.Map(studentDto, student);
+                await _repository.UpdateAsync(student);
 
-                // Save changes to the database
-                await _context.SaveChangesAsync();
+                _apiResponse.Data = _mapper.Map<StudentDTO>(student);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
 
-                // Return the updated student data as a DTO
-                return Ok(_mapper.Map<StudentDTO>(student));
+                return Ok(_apiResponse);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while updating student.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.");
+                _logger.LogError(ex, "Error occurred while updating the student.");
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                _apiResponse.Error.Add(ex.Message);
+                return _apiResponse;
             }
         }
-
-
 
         /// <summary>
         /// Applies partial updates to a student.
@@ -171,34 +216,58 @@ namespace CollegeAppWebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PatchStudent(int id, [FromBody] JsonPatchDocument<StudentDTO> patchDoc)
+        public async Task<ActionResult<APIResponse>> PatchStudent(int id, [FromBody] JsonPatchDocument<StudentDTO> patchDoc)
         {
             if (patchDoc == null)
-                return BadRequest("Invalid patch document.");
+            {
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.BadRequest;
+                _apiResponse.Error = new List<string> { "Patch document is null." };
+                return BadRequest(_apiResponse);
+            }
 
             try
             {
-                var student = await _context.Students.FindAsync(id);
+                var student = await _repository.GetAsync(n => n.Id == id);
                 if (student == null)
-                    return NotFound($"Student with ID {id} not found.");
+                {
+                    _apiResponse.Status = false;
+                    _apiResponse.StatusCode = HttpStatusCode.NotFound;
+                    _apiResponse.Error = new List<string> { "Student not found." };
+                    return NotFound(_apiResponse);
+                }
 
                 var studentDto = _mapper.Map<StudentDTO>(student);
-
                 patchDoc.ApplyTo(studentDto, ModelState);
+
                 if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+                {
+                    _apiResponse.Status = false;
+                    _apiResponse.StatusCode = HttpStatusCode.BadRequest;
+                    _apiResponse.Error = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    return BadRequest(_apiResponse);
+                }
 
                 _mapper.Map(studentDto, student);
-                await _context.SaveChangesAsync();
+                await _repository.UpdateAsync(student);
 
-                return Ok(_mapper.Map<StudentDTO>(student));
+                _apiResponse.Data = _mapper.Map<StudentDTO>(student);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
+
+                return Ok(_apiResponse);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while patching student.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.");
+                _logger.LogError(ex, "Error occurred while patching the student.");
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                _apiResponse.Error.Add(ex.Message);
+                return _apiResponse;
             }
         }
+       
+
 
         /// <summary>
         /// Deletes a student by ID.
@@ -207,27 +276,43 @@ namespace CollegeAppWebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteStudent(int id)
+        public async Task<ActionResult<APIResponse>> DeleteStudent(int id)
         {
             if (id <= 0)
-                return BadRequest("The ID must be a positive integer greater than 0.");
+            {
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.BadRequest;
+                _apiResponse.Error = new List<string> { "The ID must be a positive integer greater than 0." };
+                return BadRequest(_apiResponse);
+            }
 
             try
             {
-                var student = await _context.Students.FindAsync(id);
+                var student = await _repository.GetAsync(s => s.Id == id);
                 if (student == null)
-                    return NotFound($"Student with ID {id} not found.");
+                {
+                    _apiResponse.Status = false;
+                    _apiResponse.StatusCode = HttpStatusCode.NotFound;
+                    _apiResponse.Error = new List<string> { $"Student with ID {id} not found." };
+                    return NotFound(_apiResponse);
+                }
 
-                _context.Students.Remove(student);
-                await _context.SaveChangesAsync();
+                await _repository.DeleteAsync(student);
+
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.NoContent;
 
                 return NoContent();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while deleting student.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.");
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                _apiResponse.Error.Add(ex.Message);
+                return _apiResponse;
             }
         }
+
     }
 }

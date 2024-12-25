@@ -16,32 +16,41 @@ namespace CollegeAppWebAPI.Models.Data.Config
             builder.Property(n => n.Email).IsRequired();
             builder.Property(n => n.Email).HasMaxLength(255);
             builder.HasData(new List<Student>()
-            {
-                new Student
-                {
-                    Id = 1,
-                    StudentName = "Alice",
-                    Email = "abc@gmail.com",
-                    Address = "Mansehra, Pakistan",
-                    DOB = new DateTime(2000, 5, 15) // Example date
-                } ,
-                new Student
-                {
-                    Id = 2,
-                    StudentName = "Bob",
-                    Email = "xyz@gmail.com",
-                    Address = "Abbotabad, Pakistan",
-                    DOB = new DateTime(1998, 8, 20) // Example date
-                },
-                 new Student
-                 {
-                     Id = 3,
-                     StudentName = "Charlie",
-                     Email = "mno@gmail.com",
-                     Address = "Mansehra, Pakistan",
-                     DOB = new DateTime(1995, 3, 10) // Example date
-                 }
-            });
+{
+    new Student
+    {
+        Id = 1,
+        StudentName = "Alice",
+        Email = "abc@gmail.com",
+        Address = "Mansehra, Pakistan",
+        DOB = new DateTime(2000, 5, 15),
+        DepartmentId = 1 // Matches the Psychology department
+    },
+    new Student
+    {
+        Id = 2,
+        StudentName = "Bob",
+        Email = "xyz@gmail.com",
+        Address = "Abbotabad, Pakistan",
+        DOB = new DateTime(1998, 8, 20),
+        DepartmentId = 2 // Matches the Computer Science department
+    },
+    new Student
+    {
+        Id = 3,
+        StudentName = "Charlie",
+        Email = "mno@gmail.com",
+        Address = "Mansehra, Pakistan",
+        DOB = new DateTime(1995, 3, 10),
+        DepartmentId = 1 // Matches the Psychology department
+    }
+});
+
+
+            builder.HasOne(n => n.Department)
+                .WithMany(n => n.Students)
+                .HasForeignKey(n => n.DepartmentId)
+                .HasConstraintName("FK_Students_Departments");
         }
     }
 }

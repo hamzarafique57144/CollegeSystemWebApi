@@ -4,6 +4,7 @@ using CollegeAppWebAPI.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CollegeAppWebAPI.Migrations
 {
     [DbContext(typeof(CollegeDbContext))]
-    partial class CollegeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241221101208_AddDepartmentTable3")]
+    partial class AddDepartmentTable3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -98,7 +100,6 @@ namespace CollegeAppWebAPI.Migrations
                             Id = 1,
                             Address = "Mansehra, Pakistan",
                             DOB = new DateTime(2000, 5, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            DepartmentId = 1,
                             Email = "abc@gmail.com",
                             StudentName = "Alice"
                         },
@@ -107,7 +108,6 @@ namespace CollegeAppWebAPI.Migrations
                             Id = 2,
                             Address = "Abbotabad, Pakistan",
                             DOB = new DateTime(1998, 8, 20, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            DepartmentId = 2,
                             Email = "xyz@gmail.com",
                             StudentName = "Bob"
                         },
@@ -116,7 +116,6 @@ namespace CollegeAppWebAPI.Migrations
                             Id = 3,
                             Address = "Mansehra, Pakistan",
                             DOB = new DateTime(1995, 3, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            DepartmentId = 1,
                             Email = "mno@gmail.com",
                             StudentName = "Charlie"
                         });
