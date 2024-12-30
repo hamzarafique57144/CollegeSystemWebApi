@@ -101,7 +101,7 @@ namespace CollegeAppWebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<APIResponse>> GetStudentByName(string name)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrEmpty(name))
                 return BadRequest("The name must not be null or empty.");
 
             try
@@ -146,11 +146,13 @@ namespace CollegeAppWebAPI.Controllers
                 var student = _mapper.Map<Student>(studentDto);
                 var createdStudent = await _repository.AddAsync(student);
 
-                _apiResponse.Data = _mapper.Map<StudentDTO>(createdStudent);
+                var result = _mapper.Map<StudentDTO>(createdStudent);
+                studentDto.Id = result.Id;
+                _apiResponse.Data = studentDto;
                 _apiResponse.Status = true;
                 _apiResponse.StatusCode = HttpStatusCode.OK;
-                //return CreatedAtRoute("GetStudentById", new { id = createdStudentDto.Id }, createdStudentDto);
-                return Ok(_apiResponse);
+                return CreatedAtRoute("GetStudentById", new { id = studentDto.Id },_apiResponse);
+                
             }
             catch (Exception ex)
             {
@@ -165,35 +167,33 @@ namespace CollegeAppWebAPI.Controllers
         /// <summary>
         /// Updates an existing student.
         /// </summary>
-        [HttpPut("{id:int}")]
+        [HttpPut]
+        [Route("Update")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<APIResponse>> UpdateStudent(int id, [FromBody] StudentDTO studentDto)
+        public async Task<ActionResult<APIResponse>> UpdateStudent(StudentDTO dto)
         {
-            if (!ModelState.IsValid || id != studentDto.Id)
+            if (dto == null || dto.Id <= 0)
             {
-                _apiResponse.Status = false;
-                _apiResponse.StatusCode = HttpStatusCode.BadRequest;
-                _apiResponse.Error = new List<string> { "Invalid data or mismatched ID." };
-                return BadRequest(_apiResponse);
+                return BadRequest("Invalid role data or ID.");
             }
 
             try
             {
-                var student = await _repository.GetAsync(n => n.Id == id);
-                if (student == null)
+                var existingRole = await _repository.GetAsync(r => r.Id == dto.Id, true);
+                if (existingRole == null)
                 {
-                    _apiResponse.Status = false;
-                    _apiResponse.StatusCode = HttpStatusCode.NotFound;
-                    _apiResponse.Error = new List<string> { "Student not found." };
-                    return NotFound(_apiResponse);
+                    return NotFound($"Role not found with ID: {dto.Id}");
                 }
 
-                _mapper.Map(studentDto, student);
-                await _repository.UpdateAsync(student);
+                // Preserve existing data and update properties from DTO
+                _mapper.Map(dto, existingRole);
+               
 
-                _apiResponse.Data = _mapper.Map<StudentDTO>(student);
+                await _repository.UpdateAsync(existingRole);
+
+                _apiResponse.Data = _mapper.Map<StudentDTO>(existingRole);
                 _apiResponse.Status = true;
                 _apiResponse.StatusCode = HttpStatusCode.OK;
 
@@ -201,11 +201,10 @@ namespace CollegeAppWebAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while updating the student.");
                 _apiResponse.Status = false;
                 _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
                 _apiResponse.Error.Add(ex.Message);
-                return _apiResponse;
+                return StatusCode(StatusCodes.Status500InternalServerError, _apiResponse);
             }
         }
 

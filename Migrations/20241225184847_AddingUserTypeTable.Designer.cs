@@ -4,6 +4,7 @@ using CollegeAppWebAPI.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CollegeAppWebAPI.Migrations
 {
     [DbContext(typeof(CollegeDbContext))]
-    partial class CollegeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241225184847_AddingUserTypeTable")]
+    partial class AddingUserTypeTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -232,8 +234,6 @@ namespace CollegeAppWebAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserTypeId");
-
                     b.ToTable("Users", (string)null);
                 });
 
@@ -332,18 +332,6 @@ namespace CollegeAppWebAPI.Migrations
                     b.Navigation("Department");
                 });
 
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.User", b =>
-                {
-                    b.HasOne("CollegeAppWebAPI.Models.Data.UserType", "UserType")
-                        .WithMany("Users")
-                        .HasForeignKey("UserTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_User_UserTypes");
-
-                    b.Navigation("UserType");
-                });
-
             modelBuilder.Entity("CollegeAppWebAPI.Models.Data.UserRoleMapping", b =>
                 {
                     b.HasOne("CollegeAppWebAPI.Models.Data.Role", "Role")
@@ -380,11 +368,6 @@ namespace CollegeAppWebAPI.Migrations
             modelBuilder.Entity("CollegeAppWebAPI.Models.Data.User", b =>
                 {
                     b.Navigation("UserRoleMappings");
-                });
-
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.UserType", b =>
-                {
-                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

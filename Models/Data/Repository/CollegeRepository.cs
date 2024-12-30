@@ -32,7 +32,18 @@ namespace CollegeAppWebAPI.Models.Data.Repository
             {
                 return await _dbSet.AsNoTracking().FirstOrDefaultAsync(filter);
             }
-        }   
+        }
+        public async Task<List<T>> GetAllByFilterAsync(Expression<Func<T, bool>> filter, bool trackEntity = false)
+        {
+            if (trackEntity)
+            {
+                return await _dbSet.Where(filter).ToListAsync();
+            }
+            else
+            {
+                return await _dbSet.AsNoTracking().Where(filter).ToListAsync();
+            }
+        }
         public async Task<T> AddAsync(T entity)
         {
             await _dbSet.AddAsync(entity);

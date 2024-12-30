@@ -2,6 +2,7 @@ using CollegeAppWebAPI.Configurations;
 using CollegeAppWebAPI.Models;
 using CollegeAppWebAPI.Models.Data;
 using CollegeAppWebAPI.Models.Data.Repository;
+using CollegeAppWebAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -60,6 +61,7 @@ builder.Services.AddDbContext<CollegeDbContext>(options =>
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddScoped<DbContext, CollegeDbContext>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped(typeof(ICollegeRepository<>), typeof(CollegeRepository<>));
 builder.Services.AddCors(options =>
 {

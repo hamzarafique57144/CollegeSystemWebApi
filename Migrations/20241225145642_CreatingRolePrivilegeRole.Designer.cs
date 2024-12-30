@@ -4,6 +4,7 @@ using CollegeAppWebAPI.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CollegeAppWebAPI.Migrations
 {
     [DbContext(typeof(CollegeDbContext))]
-    partial class CollegeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241225145642_CreatingRolePrivilegeRole")]
+    partial class CreatingRolePrivilegeRole
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -223,7 +225,7 @@ namespace CollegeAppWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UserTypeId")
+                    b.Property<int>("UserType")
                         .HasColumnType("int");
 
                     b.Property<string>("Username")
@@ -232,82 +234,7 @@ namespace CollegeAppWebAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserTypeId");
-
                     b.ToTable("Users", (string)null);
-                });
-
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.UserRoleMapping", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleId");
-
-                    b.HasIndex(new[] { "UserId", "RoleId" }, "UK_UserRoleMapping")
-                        .IsUnique();
-
-                    b.ToTable("UserRoleMappings", (string)null);
-                });
-
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.UserType", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1500)
-                        .HasColumnType("nvarchar(1500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("UserTypes", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Description = "for students",
-                            Name = "Student"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Description = "for faculty",
-                            Name = "Faculty"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Description = "for supporting staff",
-                            Name = "Supporting Staff"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Description = "for parent",
-                            Name = "Parent"
-                        });
                 });
 
             modelBuilder.Entity("CollegeAppWebAPI.Models.Data.RolePrivilege", b =>
@@ -332,39 +259,6 @@ namespace CollegeAppWebAPI.Migrations
                     b.Navigation("Department");
                 });
 
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.User", b =>
-                {
-                    b.HasOne("CollegeAppWebAPI.Models.Data.UserType", "UserType")
-                        .WithMany("Users")
-                        .HasForeignKey("UserTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_User_UserTypes");
-
-                    b.Navigation("UserType");
-                });
-
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.UserRoleMapping", b =>
-                {
-                    b.HasOne("CollegeAppWebAPI.Models.Data.Role", "Role")
-                        .WithMany("UserRoleMappings")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_UserRoleMapping_Role");
-
-                    b.HasOne("CollegeAppWebAPI.Models.Data.User", "User")
-                        .WithMany("UserRoleMappings")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_UserRoleMapping_User");
-
-                    b.Navigation("Role");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CollegeAppWebAPI.Models.Data.Department", b =>
                 {
                     b.Navigation("Students");
@@ -373,18 +267,6 @@ namespace CollegeAppWebAPI.Migrations
             modelBuilder.Entity("CollegeAppWebAPI.Models.Data.Role", b =>
                 {
                     b.Navigation("RolePrivileges");
-
-                    b.Navigation("UserRoleMappings");
-                });
-
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.User", b =>
-                {
-                    b.Navigation("UserRoleMappings");
-                });
-
-            modelBuilder.Entity("CollegeAppWebAPI.Models.Data.UserType", b =>
-                {
-                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

@@ -14,10 +14,12 @@ namespace CollegeAppWebAPI.Controllers
     public class LoginController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private readonly APIResponse _apiResponse;
 
         public LoginController(IConfiguration configuration)
         {
             _configuration = configuration;
+            _apiResponse = new APIResponse(); // Initialize APIResponse
         }
 
         [HttpPost]
@@ -25,20 +27,24 @@ namespace CollegeAppWebAPI.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState); // Return validation errors
+                _apiResponse.Status = false;
+                _apiResponse.Error = new List<string> { "Invalid input data." };
+                return BadRequest(_apiResponse);
             }
 
             // Dummy validation for username and password
             if (model.UserName == "Hamza" && model.Password == "123qwe")
             {
-                // Retrieve required JWT settings
+                // Validate JWT settings
                 var secretKey = _configuration.GetValue<string>("JwtSettings:SecretKey");
                 var audience = _configuration.GetValue<string>("JwtSettings:Audience");
                 var issuer = _configuration.GetValue<string>("JwtSettings:Issuer");
 
-                if (string.IsNullOrEmpty(secretKey))
+                if (string.IsNullOrEmpty(secretKey) || string.IsNullOrEmpty(audience) || string.IsNullOrEmpty(issuer))
                 {
-                    return StatusCode(StatusCodes.Status500InternalServerError, "Secret key is not configured.");
+                    _apiResponse.Status = false;
+                    _apiResponse.Error = new List<string> { "JWT configuration is missing or incomplete." };
+                    return StatusCode(StatusCodes.Status500InternalServerError, _apiResponse);
                 }
 
                 var key = Encoding.ASCII.GetBytes(secretKey);
@@ -48,12 +54,12 @@ namespace CollegeAppWebAPI.Controllers
                 {
                     Subject = new ClaimsIdentity(new Claim[]
                     {
-                        new Claim(ClaimTypes.Name, model.UserName), // Add Name claim
-                        new Claim(ClaimTypes.Role, "Admin")          // Add Role claim
+                        new Claim(ClaimTypes.Name, model.UserName),
+                        new Claim(ClaimTypes.Role, "Admin")
                     }),
-                    Expires = DateTime.UtcNow.AddHours(4), // Token expiration
-                    Audience = audience,                  // Add Audience claim
-                    Issuer = issuer,                      // Add Issuer claim
+                    Expires = DateTime.UtcNow.AddHours(4),
+                    Audience = audience,
+                    Issuer = issuer,
                     SigningCredentials = new SigningCredentials(
                         new SymmetricSecurityKey(key),
                         SecurityAlgorithms.HmacSha512Signature)
@@ -61,16 +67,20 @@ namespace CollegeAppWebAPI.Controllers
 
                 var token = tokenHandler.CreateToken(tokenDescriptor);
 
-                return Ok(new LoginResponseDTO
+                _apiResponse.Status = true;
+                _apiResponse.Data = new LoginResponseDTO
                 {
                     UserName = model.UserName,
                     Token = tokenHandler.WriteToken(token),
                     Expiration = token.ValidTo
-                });
+                };
+                return Ok(_apiResponse);
             }
 
-            // Generic error message for invalid credentials
-            return Unauthorized("Invalid credentials.");
+            // Invalid credentials
+            _apiResponse.Status = false;
+            _apiResponse.Error = new List<string> { "Invalid credentials." };
+            return Unauthorized(_apiResponse);
         }
     }
 }
